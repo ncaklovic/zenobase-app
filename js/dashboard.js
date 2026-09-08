@@ -87,17 +87,19 @@ function setupTabs() {
   });
 }
 
-async function initDashboard() {
-  setupTabs();
+async function loadAndRenderDashboard() {
+  const statusEl = document.getElementById("dashboard-status");
 
   if (!hasGitHubToken()) {
-    document.getElementById("dashboard-status").textContent =
-      "Add your GitHub token in Settings to load data.";
+    statusEl.textContent = "Add your GitHub token in Settings to load data.";
     return;
   }
 
-  const statusEl = document.getElementById("dashboard-status");
   statusEl.textContent = "Loading...";
+
+  for (const id of ["tab-movies", "tab-tv", "tab-books", "tab-music"]) {
+    document.getElementById(id).innerHTML = "";
+  }
 
   try {
     const [watched, books, music] = await Promise.all([
@@ -119,6 +121,11 @@ async function initDashboard() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  setupTabs();
   initSettingsPanel();
-  initDashboard();
+  loadAndRenderDashboard();
 });
+
+// Settings saving a working token after the initial (token-less) load
+// should actually load the data, not leave the page looking empty.
+document.addEventListener("zenobase:settings-saved", loadAndRenderDashboard);

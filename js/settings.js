@@ -27,6 +27,9 @@ function initSettingsPanel() {
       status.textContent = result.ok
         ? `Saved. Authenticated as ${result.login}.`
         : `Saved, but GitHub token check failed (status ${result.status}).`;
+      if (result.ok) {
+        document.dispatchEvent(new CustomEvent("zenobase:settings-saved"));
+      }
     } catch (e) {
       status.textContent = `Saved, but couldn't verify: ${e.message}`;
     }

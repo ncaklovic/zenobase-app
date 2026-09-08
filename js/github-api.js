@@ -24,6 +24,13 @@ function utf8ToBase64(str) {
   return btoa(binary);
 }
 
+function base64ToUtf8(b64) {
+  const binary = atob(b64.replace(/\n/g, ""));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
 function apiUrl(path) {
   const { owner, name } = CONFIG.dataRepo;
   return `https://api.github.com/repos/${owner}/${name}/contents/${path}`;
@@ -55,25 +62,31 @@ async function ghGetRawText(path) {
 }
 
 /**
- * Fetch just the current sha of a file (needed to update it), without
- * pulling its full content. Returns null if the file doesn't exist.
+ * Fetch a small file's content AND sha together, in one request, so a
+ * subsequent write can be checked against the exact version we read -
+ * not a separately-fetched (possibly newer) sha. Only use this for files
+ * under ~1MB (the manual_*.json files this app owns); large read-only
+ * files should use ghGetRawText instead.
+ * Returns null if the file doesn't exist.
  */
-async function ghGetSha(path) {
+async function ghGetFileWithSha(path) {
   const url = `${apiUrl(path)}?ref=${CONFIG.dataRepo.branch}`;
   const res = await fetch(url, { headers: authHeaders() });
   if (res.status === 404) return null;
   if (!res.ok) {
-    throw new Error(`Failed to get sha for ${path}: ${res.status} ${await res.text()}`);
+    throw new Error(`Failed to read ${path}: ${res.status} ${await res.text()}`);
   }
   const data = await res.json();
-  return data.sha;
+  return { content: base64ToUtf8(data.content), sha: data.sha };
 }
 
 /**
- * Create or update a file in the data repo.
+ * Create or update a file in the data repo. `sha` must be the sha of the
+ * exact version this write is based on (null only when creating a file
+ * that doesn't exist yet) - GitHub rejects the write with a 409 if the
+ * file has changed since, rather than silently overwriting it.
  */
-async function ghPutFile(path, contentStr, message) {
-  const sha = await ghGetSha(path);
+async function ghPutFile(path, contentStr, message, sha) {
   const body = {
     message,
     content: utf8ToBase64(contentStr),
@@ -86,6 +99,11 @@ async function ghPutFile(path, contentStr, message) {
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   });
+  if (res.status === 409) {
+    const err = new Error(`Conflict writing ${path}: file changed since it was read`);
+    err.isConflict = true;
+    throw err;
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(`Failed to write ${path}: ${res.status} ${err.message || ""}`);

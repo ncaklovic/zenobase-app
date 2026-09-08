@@ -14,15 +14,36 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function nowTimeStr() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/** Combine a <input type=date> value and <input type=time> value (both
+ * local, no timezone info) into an ISO timestamp reflecting local time. */
+function localDateTimeToIso(dateStr, timeStr) {
+  return new Date(`${dateStr}T${timeStr || "00:00"}:00`).toISOString();
+}
+
 function makeManualId() {
   return `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-async function appendToManualFile(path, entry, commitMessage) {
-  const existingText = await ghGetRawText(path);
-  const existing = existingText ? JSON.parse(existingText) : [];
-  const updated = [entry, ...existing];
-  await ghPutFile(path, JSON.stringify(updated, null, 2), commitMessage);
+async function appendToManualFile(path, entry, commitMessage, attempt = 1) {
+  const existing = await ghGetFileWithSha(path);
+  const items = existing ? JSON.parse(existing.content) : [];
+  const updated = [entry, ...items];
+  try {
+    await ghPutFile(path, JSON.stringify(updated, null, 2), commitMessage, existing?.sha);
+  } catch (err) {
+    // Someone else wrote to this file between our read and our write
+    // (e.g. two tabs, or a double-submit). Re-read the latest version
+    // and try again rather than risk losing what changed in between.
+    if (err.isConflict && attempt < 5) {
+      return appendToManualFile(path, entry, commitMessage, attempt + 1);
+    }
+    throw err;
+  }
 }
 
 // ---------- Movies ----------
@@ -32,9 +53,11 @@ function initMovieForm() {
   const resultsEl = document.getElementById("movie-results");
   const form = document.getElementById("movie-save-form");
   const dateInput = document.getElementById("movie-date");
+  const timeInput = document.getElementById("movie-time");
   const selectedLabel = document.getElementById("movie-selected");
   const statusEl = document.getElementById("movie-status");
   dateInput.value = todayStr();
+  timeInput.value = nowTimeStr();
 
   let selected = null;
 
@@ -74,7 +97,7 @@ function initMovieForm() {
       const ext = await tmdbMovieExternalIds(selected.tmdbId);
       const entry = {
         id: makeManualId(),
-        watched_at: new Date(dateInput.value + "T12:00:00").toISOString(),
+        watched_at: localDateTimeToIso(dateInput.value, timeInput.value),
         action: "watch",
         type: "movie",
         movie: {
@@ -107,11 +130,13 @@ function initTvForm() {
   const resultsEl = document.getElementById("tv-results");
   const form = document.getElementById("tv-save-form");
   const dateInput = document.getElementById("tv-date");
+  const timeInput = document.getElementById("tv-time");
   const seasonInput = document.getElementById("tv-season");
   const episodeInput = document.getElementById("tv-episode");
   const selectedLabel = document.getElementById("tv-selected");
   const statusEl = document.getElementById("tv-status");
   dateInput.value = todayStr();
+  timeInput.value = nowTimeStr();
 
   let selectedShow = null;
 
@@ -161,7 +186,7 @@ function initTvForm() {
       ]);
       const entry = {
         id: makeManualId(),
-        watched_at: new Date(dateInput.value + "T12:00:00").toISOString(),
+        watched_at: localDateTimeToIso(dateInput.value, timeInput.value),
         action: "watch",
         type: "episode",
         episode: {
