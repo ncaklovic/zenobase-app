@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>zenobase - Add entry</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>zenobase</h1>
+    <nav>
+      <a href="index.html">&larr; Dashboard</a>
+      <button id="settings-open">Settings</button>
+    </nav>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-button active" data-tab="add-movie">Movie</button>
+    <button class="tab-button" data-tab="add-tv">TV episode</button>
+    <button class="tab-button" data-tab="add-book">Book</button>
+  </div>
+
+  <main>
+    <section id="tab-add-movie" class="tab-panel entry-form">
+      <input id="movie-search" type="text" placeholder="Search for a movie..." />
+      <ul id="movie-results" class="search-results"></ul>
+      <p id="movie-selected" class="selected-label"></p>
+      <form id="movie-save-form">
+        <label>Watched on <input id="movie-date" type="date" required /></label>
+        <button type="submit">Save</button>
+      </form>
+      <p id="movie-status" class="status"></p>
+    </section>
+
+    <section id="tab-add-tv" class="tab-panel entry-form hidden">
+      <input id="tv-search" type="text" placeholder="Search for a show..." />
+      <ul id="tv-results" class="search-results"></ul>
+      <p id="tv-selected" class="selected-label"></p>
+      <form id="tv-save-form">
+        <label>Season <input id="tv-season" type="number" min="1" required /></label>
+        <label>Episode <input id="tv-episode" type="number" min="1" required /></label>
+        <label>Watched on <input id="tv-date" type="date" required /></label>
+        <button type="submit">Save</button>
+      </form>
+      <p id="tv-status" class="status"></p>
+    </section>
+
+    <section id="tab-add-book" class="tab-panel entry-form hidden">
+      <input id="book-search" type="text" placeholder="Search for a book..." />
+      <ul id="book-results" class="search-results"></ul>
+      <p id="book-selected" class="selected-label"></p>
+      <form id="book-save-form">
+        <label>Date read <input id="book-date" type="date" required /></label>
+        <label>Rating (1-5, optional) <input id="book-rating" type="number" min="1" max="5" /></label>
+        <button type="submit">Save</button>
+      </form>
+      <p id="book-status" class="status"></p>
+    </section>
+  </main>
+
+  <div id="settings-panel" class="settings-panel hidden">
+    <div class="settings-box">
+      <h2>Settings</h2>
+      <label>
+        GitHub token (fine-grained PAT, Contents: Read &amp; write, scoped to the <code>zenobase</code> repo)
+        <input id="gh-token-input" type="password" placeholder="github_pat_..." />
+      </label>
+      <label>
+        TMDB API key
+        <input id="tmdb-key-input" type="password" placeholder="TMDB v3 API key" />
+      </label>
+      <p class="hint">Stored only in this browser's local storage. Never sent anywhere except GitHub/TMDB.</p>
+      <p id="settings-status" class="status"></p>
+      <div class="settings-actions">
+        <button id="settings-save">Save</button>
+        <button id="settings-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/github-api.js"></script>
+  <script src="js/tmdb.js"></script>
+  <script src="js/openlibrary.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/entry.js"></script>
+  <script>
+    // Reuse the same tab-switching behavior as the dashboard.
+    document.querySelectorAll(".tab-button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-button").forEach((b) => b.classList.remove("active"));
+        document.querySelectorAll(".tab-panel").forEach((p) => p.classList.add("hidden"));
+        btn.classList.add("active");
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.remove("hidden");
+      });
+    });
+  </script>
+</body>
+</html>

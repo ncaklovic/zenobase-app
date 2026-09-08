@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>zenobase</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>zenobase</h1>
+    <nav>
+      <a href="add.html">+ Add entry</a>
+      <button id="settings-open">Settings</button>
+    </nav>
+  </header>
+
+  <p id="dashboard-status" class="status"></p>
+
+  <div class="tabs">
+    <button class="tab-button active" data-tab="movies">Movies</button>
+    <button class="tab-button" data-tab="tv">TV</button>
+    <button class="tab-button" data-tab="books">Books</button>
+    <button class="tab-button" data-tab="music">Music</button>
+  </div>
+
+  <main>
+    <section id="tab-movies" class="tab-panel"></section>
+    <section id="tab-tv" class="tab-panel hidden"></section>
+    <section id="tab-books" class="tab-panel hidden"></section>
+    <section id="tab-music" class="tab-panel hidden"></section>
+  </main>
+
+  <div id="settings-panel" class="settings-panel hidden">
+    <div class="settings-box">
+      <h2>Settings</h2>
+      <label>
+        GitHub token (fine-grained PAT, Contents: Read &amp; write, scoped to the <code>zenobase</code> repo)
+        <input id="gh-token-input" type="password" placeholder="github_pat_..." />
+      </label>
+      <label>
+        TMDB API key
+        <input id="tmdb-key-input" type="password" placeholder="TMDB v3 API key" />
+      </label>
+      <p class="hint">Stored only in this browser's local storage. Never sent anywhere except GitHub/TMDB.</p>
+      <p id="settings-status" class="status"></p>
+      <div class="settings-actions">
+        <button id="settings-save">Save</button>
+        <button id="settings-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/github-api.js"></script>
+  <script src="js/csv.js"></script>
+  <script src="js/data-service.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
