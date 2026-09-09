@@ -9,8 +9,18 @@ function getGitHubToken() {
   return localStorage.getItem(GH_TOKEN_KEY) || "";
 }
 
+// Zero-width space, ZWNJ, ZWJ, BOM - mobile paste (e.g. from a password
+// manager or notes app on Android) can smuggle these in, and .trim() alone
+// won't catch them, silently turning a correct PAT into one GitHub rejects
+// with 401. Built from code points rather than embedded literally so the
+// invisible characters themselves don't end up sitting unseen in this file.
+const INVISIBLE_CHARS_RE = new RegExp(
+  `[${String.fromCharCode(0x200b, 0x200c, 0x200d, 0xfeff)}]`,
+  "g"
+);
+
 function setGitHubToken(token) {
-  localStorage.setItem(GH_TOKEN_KEY, token.trim());
+  localStorage.setItem(GH_TOKEN_KEY, token.trim().replace(INVISIBLE_CHARS_RE, ""));
 }
 
 function hasGitHubToken() {

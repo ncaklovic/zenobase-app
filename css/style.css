@@ -159,6 +159,12 @@ main { padding: 1rem 1.5rem 3rem; }
   color: var(--fg);
 }
 
+.settings-box .checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .settings-box .hint { color: var(--muted); font-size: 0.8rem; }
 
 .settings-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }

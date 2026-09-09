@@ -11,12 +11,19 @@ function initSettingsPanel() {
   const tmdbInput = document.getElementById("tmdb-key-input");
   const saveBtn = document.getElementById("settings-save");
   const status = document.getElementById("settings-status");
+  const showTokensCheckbox = document.getElementById("settings-show-tokens");
 
   ghInput.value = getGitHubToken();
   tmdbInput.value = getTmdbKey();
 
   openBtn.addEventListener("click", () => panel.classList.remove("hidden"));
   closeBtn.addEventListener("click", () => panel.classList.add("hidden"));
+
+  showTokensCheckbox.addEventListener("change", () => {
+    const type = showTokensCheckbox.checked ? "text" : "password";
+    ghInput.type = type;
+    tmdbInput.type = type;
+  });
 
   saveBtn.addEventListener("click", async () => {
     setGitHubToken(ghInput.value);
