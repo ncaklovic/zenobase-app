@@ -11,7 +11,9 @@ function getTmdbKey() {
 }
 
 function setTmdbKey(key) {
-  localStorage.setItem(TMDB_KEY_STORAGE, key.trim());
+  // sanitizeSecret is defined in github-api.js, loaded before this file on
+  // every page (see CLAUDE.md's shared-script-dependency gotcha).
+  localStorage.setItem(TMDB_KEY_STORAGE, sanitizeSecret(key));
 }
 
 async function tmdbSearchMovie(query) {

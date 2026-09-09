@@ -9,18 +9,24 @@ function getGitHubToken() {
   return localStorage.getItem(GH_TOKEN_KEY) || "";
 }
 
-// Zero-width space, ZWNJ, ZWJ, BOM - mobile paste (e.g. from a password
-// manager or notes app on Android) can smuggle these in, and .trim() alone
-// won't catch them, silently turning a correct PAT into one GitHub rejects
-// with 401. Built from code points rather than embedded literally so the
-// invisible characters themselves don't end up sitting unseen in this file.
-const INVISIBLE_CHARS_RE = new RegExp(
-  `[${String.fromCharCode(0x200b, 0x200c, 0x200d, 0xfeff)}]`,
+// A token/key never legitimately contains whitespace, so strip all of it -
+// not just leading/trailing - plus zero-width space/ZWNJ/ZWJ/BOM. Mobile
+// paste (a text editor auto-wrapping a line, a password manager, a notes
+// app) can insert any of these *anywhere*, including in the middle, which
+// .trim() alone won't catch and which silently turns a correct PAT into
+// one GitHub rejects with 401. Built from code points rather than embedded
+// literally so the invisible characters don't end up sitting unseen here.
+const SECRET_SANITIZE_RE = new RegExp(
+  `[\\s${String.fromCharCode(0x200b, 0x200c, 0x200d, 0xfeff)}]`,
   "g"
 );
 
+function sanitizeSecret(value) {
+  return value.replace(SECRET_SANITIZE_RE, "");
+}
+
 function setGitHubToken(token) {
-  localStorage.setItem(GH_TOKEN_KEY, token.trim().replace(INVISIBLE_CHARS_RE, ""));
+  localStorage.setItem(GH_TOKEN_KEY, sanitizeSecret(token));
 }
 
 function hasGitHubToken() {
