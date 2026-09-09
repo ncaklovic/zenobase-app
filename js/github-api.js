@@ -53,6 +53,7 @@ async function ghGetRawText(path) {
   const url = `${apiUrl(path)}?ref=${CONFIG.dataRepo.branch}`;
   const res = await fetch(url, {
     headers: authHeaders({ Accept: "application/vnd.github.raw+json" }),
+    cache: "no-store",
   });
   if (res.status === 404) return null;
   if (!res.ok) {
@@ -67,17 +68,34 @@ async function ghGetRawText(path) {
  * not a separately-fetched (possibly newer) sha. Only use this for files
  * under ~1MB (the manual_*.json files this app owns); large read-only
  * files should use ghGetRawText instead.
+ *
+ * `cache: "no-store"` matters here specifically because this hits the same
+ * URL as ghGetRawText (same path+ref), just with a different Accept header
+ * (JSON wrapper vs. raw file bytes). A cached raw response getting reused
+ * for this request would make `res.json()` parse the file's own JSON
+ * content as `data` instead of the expected `{content, sha}` object -
+ * `data.content`/`data.sha` would then silently be undefined. Confirmed
+ * this can happen on this network (TLS-inspecting corporate proxy, see
+ * CLAUDE.md) even for small files well under any size limit.
  * Returns null if the file doesn't exist.
  */
 async function ghGetFileWithSha(path) {
   const url = `${apiUrl(path)}?ref=${CONFIG.dataRepo.branch}`;
-  const res = await fetch(url, { headers: authHeaders() });
+  const res = await fetch(url, { headers: authHeaders(), cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) {
     throw new Error(`Failed to read ${path}: ${res.status} ${await res.text()}`);
   }
   const data = await res.json();
-  return { content: base64ToUtf8(data.content), sha: data.sha };
+  // `sha` is always present in the JSON-wrapper response; `content` is
+  // additionally omitted by GitHub once a file crosses ~1MB (same limit
+  // noted for trakt_full.json / lastfm_full.json) - fall back to a raw
+  // fetch for content only, still paired with the sha from this response.
+  if (data.content) {
+    return { content: base64ToUtf8(data.content), sha: data.sha };
+  }
+  const content = await ghGetRawText(path);
+  return { content, sha: data.sha };
 }
 
 /**
