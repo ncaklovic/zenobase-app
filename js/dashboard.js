@@ -13,18 +13,61 @@ function el(tag, className, text) {
   return e;
 }
 
+const PAGE_SIZE = 50;
+
+// Renders `items` as a <ul class="item-list"> with Prev/Next paging below
+// it, `pageSize` items at a time. `renderItem` builds one <li> per item.
+function renderPaginatedList(container, items, renderItem, pageSize = PAGE_SIZE) {
+  let page = 0;
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+
+  const list = el("ul", "item-list");
+  const pager = el("div", "pager");
+  container.appendChild(list);
+  container.appendChild(pager);
+
+  function render() {
+    list.innerHTML = "";
+    const start = page * pageSize;
+    for (const item of items.slice(start, start + pageSize)) {
+      list.appendChild(renderItem(item));
+    }
+
+    pager.innerHTML = "";
+    if (totalPages <= 1) return;
+
+    const prevBtn = el("button", "pager-btn", "‹ Prev");
+    prevBtn.disabled = page === 0;
+    prevBtn.addEventListener("click", () => {
+      page--;
+      render();
+    });
+
+    const nextBtn = el("button", "pager-btn", "Next ›");
+    nextBtn.disabled = page >= totalPages - 1;
+    nextBtn.addEventListener("click", () => {
+      page++;
+      render();
+    });
+
+    pager.appendChild(prevBtn);
+    pager.appendChild(el("span", "pager-info", `Page ${page + 1} of ${totalPages}`));
+    pager.appendChild(nextBtn);
+  }
+
+  render();
+}
+
 function renderMovies(container, watched) {
   const movies = watched.filter((w) => w.type === "movie");
   container.appendChild(el("p", "stat", `${movies.length} movies watched`));
-  const list = el("ul", "item-list");
-  for (const m of movies.slice(0, 100)) {
+  renderPaginatedList(container, movies, (m) => {
     const li = el("li", "item-row");
     li.appendChild(el("span", "item-date", fmtDate(m.watchedAt)));
     li.appendChild(el("span", "item-title", `${m.title}${m.year ? ` (${m.year})` : ""}`));
     if (m.source === "manual") li.appendChild(el("span", "badge", "manual"));
-    list.appendChild(li);
-  }
-  container.appendChild(list);
+    return li;
+  });
 }
 
 function renderTv(container, watched) {
@@ -33,8 +76,7 @@ function renderTv(container, watched) {
   container.appendChild(
     el("p", "stat", `${episodes.length} episodes watched across ${shows.size} shows`)
   );
-  const list = el("ul", "item-list");
-  for (const e of episodes.slice(0, 150)) {
+  renderPaginatedList(container, episodes, (e) => {
     const li = el("li", "item-row");
     li.appendChild(el("span", "item-date", fmtDate(e.watchedAt)));
     const code =
@@ -43,35 +85,30 @@ function renderTv(container, watched) {
         : "";
     li.appendChild(el("span", "item-title", `${e.showTitle} ${code} - ${e.title}`));
     if (e.source === "manual") li.appendChild(el("span", "badge", "manual"));
-    list.appendChild(li);
-  }
-  container.appendChild(list);
+    return li;
+  });
 }
 
 function renderBooks(container, books) {
   container.appendChild(el("p", "stat", `${books.length} books read`));
-  const list = el("ul", "item-list");
-  for (const b of books.slice(0, 150)) {
+  renderPaginatedList(container, books, (b) => {
     const li = el("li", "item-row");
     li.appendChild(el("span", "item-date", fmtDate(b.dateRead)));
     li.appendChild(el("span", "item-title", `${b.title} - ${b.author}`));
     if (b.rating) li.appendChild(el("span", "rating", `★${b.rating}`));
     if (b.source === "manual") li.appendChild(el("span", "badge", "manual"));
-    list.appendChild(li);
-  }
-  container.appendChild(list);
+    return li;
+  });
 }
 
 function renderMusic(container, scrobbles) {
   container.appendChild(el("p", "stat", `${scrobbles.length} scrobbles`));
-  const list = el("ul", "item-list");
-  for (const s of scrobbles.slice(0, 150)) {
+  renderPaginatedList(container, scrobbles, (s) => {
     const li = el("li", "item-row");
     li.appendChild(el("span", "item-date", fmtDate(s.watchedAt)));
     li.appendChild(el("span", "item-title", `${s.artist} - ${s.name}`));
-    list.appendChild(li);
-  }
-  container.appendChild(list);
+    return li;
+  });
 }
 
 function setupTabs() {
