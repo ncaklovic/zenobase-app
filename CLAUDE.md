@@ -105,7 +105,20 @@ the file itself is still present if you want to delete it.
 - **GitHub Pages caches for 10 minutes** (`Cache-Control: max-age=600`).
   After pushing a fix, a hard refresh (Ctrl+Shift+R) may be needed to see
   it live - don't assume a fix "isn't working" without ruling this out
-  first.
+  first. Hit this concretely once: after the Goodreads scrape switch
+  (below), the live site threw `JSON.parse: unexpected character at line
+  1 column 1` and showed a stale book count - not a real bug, just Pages
+  serving the old `data-service.js` for longer than expected (needed more
+  than one hard refresh). To confirm it's *this* and not a real bug,
+  fetch the same file from `raw.githubusercontent.com/<owner>/<repo>/main/...`
+  (always current) and compare against `https://<user>.github.io/<repo>/...`
+  (what's actually being served) - if they differ, it's cache, not code.
+- **Dashboard lists need real pagination, not a hard slice.** All four
+  tabs (movies/TV/books/music) used to silently truncate to their first
+  100-150 items with nothing indicating more existed. Fixed with a shared
+  `renderPaginatedList()` helper in `js/dashboard.js` (Prev/Next, 50
+  items/page) used by all four render functions - reuse it for any new
+  list-shaped tab rather than writing another one-off slice.
 - Settings saving a *working* token must trigger a dashboard reload
   (`document.dispatchEvent(new CustomEvent("zenobase:settings-saved"))`) -
   the initial page load fires before the user has had a chance to enter a
@@ -128,3 +141,22 @@ the file itself is still present if you want to delete it.
 
 `js/config.js` hardcodes the data repo as `ncaklovic/zenobase` on branch
 `main`. Update there if either ever changes.
+
+## Next up: statistics/charts, search, formatting
+
+Planned focus for the next session, all in this repo. No design decisions
+made yet - starting points to know about:
+
+- **Data to build on**: `data/goodreads_reads_full.json` now has real
+  per-read-event history (good for "books/movies/episodes per year"-style
+  stats, unlike the old one-row-per-book Goodreads CSV); `trakt`/`lastfm`
+  already had full event-level history. All three are loaded and
+  normalized by `js/data-service.js`'s `loadWatched()`/`loadBooks()`/
+  `loadMusic()` - that's the natural place to derive stats from, or to add
+  a `loadStats()` alongside them.
+- **Search**: nothing exists yet across any tab; large lists (400+ books,
+  likely thousands of scrobbles) make this valuable pretty quickly.
+- **Formatting**: current rendering is minimal (`js/dashboard.js`'s
+  `renderMovies`/`renderTv`/`renderBooks`/`renderMusic` - see the shared
+  `renderPaginatedList()` helper added this session, reuse it for any new
+  paginated view like a stats table).
