@@ -59,31 +59,23 @@ async function loadMusic() {
   }));
 }
 
-function parseGoodreadsDate(s) {
-  // Goodreads exports dates as YYYY/MM/DD
-  if (!s) return null;
-  const [y, m, d] = s.split("/").map(Number);
-  if (!y || !m || !d) return null;
-  return new Date(y, m - 1, d);
-}
-
 async function loadBooks() {
-  const [csvText, manual] = await Promise.all([
-    ghGetRawText(CONFIG.paths.goodreads),
+  const [goodreadsRaw, manual] = await Promise.all([
+    loadJsonFile(CONFIG.paths.goodreads),
     loadJsonFile(CONFIG.paths.manualBooks),
   ]);
 
-  const goodreadsBooks = csvText
-    ? parseCsv(csvText)
-        .filter((r) => r["Exclusive Shelf"] === "read")
-        .map((r) => ({
-          title: r["Title"],
-          author: r["Author"],
-          rating: Number(r["My Rating"]) || null,
-          dateRead: parseGoodreadsDate(r["Date Read"]),
-          source: "goodreads",
-        }))
-    : [];
+  // One row per book with a read_events list - a reread book contributes
+  // one dashboard entry per past read, not just its latest date.
+  const goodreadsBooks = goodreadsRaw.flatMap((b) =>
+    b.read_events.map((e) => ({
+      title: b.title,
+      author: b.author,
+      rating: null, // never populated in the source data
+      dateRead: e.date_iso ? new Date(e.date_iso) : null,
+      source: "goodreads",
+    }))
+  );
 
   const manualBooks = manual.map((b) => ({
     title: b.title,

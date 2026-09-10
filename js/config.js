@@ -12,7 +12,7 @@ const CONFIG = {
   paths: {
     trakt: "data/trakt_full.json",           // cron-owned, movies + episodes
     lastfm: "data/lastfm_full.json",         // cron-owned, music (read-only in this app)
-    goodreads: "data/goodreads_library_export.csv", // one-time import, books
+    goodreads: "data/goodreads_reads_full.json", // scraped, one row per book with all its read_events
     manualWatched: "data/manual_watched.json", // app-owned, manual movie/episode entries
     manualBooks: "data/manual_books.json",     // app-owned, manual book entries
   },

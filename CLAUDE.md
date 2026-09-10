@@ -44,7 +44,7 @@ authenticated with a fine-grained PAT the user pastes into Settings.
 |---|---|---|
 | `data/trakt_full.json` | `zenobase`'s cron (`main.py`) | read-only |
 | `data/lastfm_full.json` | `zenobase`'s cron (`main.py`) | read-only |
-| `data/goodreads_library_export.csv` | manual one-time export | read-only |
+| `data/goodreads_reads_full.json` | manual, `zenobase`'s `scripts/scrape_goodreads_reads.py` | read-only |
 | `data/manual_watched.json` | **this app** | read + write |
 | `data/manual_books.json` | **this app** | read + write |
 
@@ -56,6 +56,25 @@ schema.
 
 Music has no entry form on purpose - Last.fm scrobbling already covers it
 automatically, so there was nothing to duplicate.
+
+### Goodreads switched from the CSV export to a full reread-history scrape (2026-09)
+
+`data/goodreads_library_export.csv` (Goodreads' own export) only ever
+carries one `Date Read` per book, so a book reread 3 times looked like a
+single read. `zenobase` (the data repo) now has
+`scripts/scrape_goodreads_reads.py`, a manual/local-only Playwright tool
+that scrapes the actual "read" shelf page (which server-renders the full
+per-read date list) into `data/goodreads_reads_full.json` - one row per
+book with a `read_events` array. `loadBooks()` in `js/data-service.js` was
+updated to read that file and flatten it: **one dashboard entry per read
+event**, not per book, so a 3-times-reread book now produces 3 rows. See
+`zenobase`'s own `CLAUDE.md` for how/when that scrape gets refreshed - it's
+not tied to the nightly cron, so this file's freshness lags behind
+`trakt`/`lastfm`.
+
+`js/csv.js` (the RFC4180 CSV parser, only ever used to parse this export)
+is now dead code - its `<script>` tag was removed from `index.html`, but
+the file itself is still present if you want to delete it.
 
 ## Metadata sources (both CORS-verified, not assumed)
 
