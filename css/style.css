@@ -107,6 +107,20 @@ main { padding: 1rem 1.5rem 3rem; }
   align-self: center;
 }
 
+.delete-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.8rem;
+  align-self: center;
+  line-height: 1.4;
+}
+
+.delete-btn:hover:not(:disabled) { color: #dc2626; border-color: #dc2626; }
+.delete-btn:disabled { opacity: 0.6; cursor: default; }
+
 .status { color: var(--muted); padding: 0 1.5rem; }
 
 .pager {

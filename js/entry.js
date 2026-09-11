@@ -25,26 +25,8 @@ function localDateTimeToIso(dateStr, timeStr) {
   return new Date(`${dateStr}T${timeStr || "00:00"}:00`).toISOString();
 }
 
-function makeManualId() {
-  return `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-async function appendToManualFile(path, entry, commitMessage, attempt = 1) {
-  const existing = await ghGetFileWithSha(path);
-  const items = existing ? JSON.parse(existing.content) : [];
-  const updated = [entry, ...items];
-  try {
-    await ghPutFile(path, JSON.stringify(updated, null, 2), commitMessage, existing?.sha);
-  } catch (err) {
-    // Someone else wrote to this file between our read and our write
-    // (e.g. two tabs, or a double-submit). Re-read the latest version
-    // and try again rather than risk losing what changed in between.
-    if (err.isConflict && attempt < 5) {
-      return appendToManualFile(path, entry, commitMessage, attempt + 1);
-    }
-    throw err;
-  }
-}
+// makeManualId() and appendToManualFile() live in manual-entries.js,
+// shared with dashboard.js's delete flow - see that file's header comment.
 
 // ---------- Movies ----------
 
@@ -272,6 +254,7 @@ function initBookForm() {
     statusEl.textContent = "Saving...";
     try {
       const entry = {
+        id: makeManualId(),
         title: selected.title,
         author: selected.author,
         date_read: dateInput.value,

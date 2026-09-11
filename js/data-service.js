@@ -78,6 +78,7 @@ async function loadBooks() {
   );
 
   const manualBooks = manual.map((b) => ({
+    id: b.id || null, // older entries predate ids - see bookMatchPredicate in dashboard.js
     title: b.title,
     author: b.author,
     rating: b.rating ?? null,

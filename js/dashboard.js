@@ -58,14 +58,74 @@ function renderPaginatedList(container, items, renderItem, pageSize = PAGE_SIZE)
   render();
 }
 
+// Manual movie/episode entries always have an `id` (makeManualId(), set
+// unconditionally by entry.js) - match on that alone.
+function watchedMatchPredicate(item) {
+  return (raw) => String(raw.id) === item.id;
+}
+
+// Manual book entries only got an `id` once entry.js started setting one
+// (2026-09) - older rows in manual_books.json don't have it. Fall back to
+// matching on the fields the dashboard actually shows; two entries with
+// identical title/author/date/rating are indistinguishable duplicates
+// anyway, so removing either one is the correct behavior for "delete this
+// duplicate".
+function bookMatchPredicate(book) {
+  if (book.id) {
+    return (raw) => String(raw.id) === book.id;
+  }
+  const dateStr = book.dateRead ? fmtDate(book.dateRead) : null;
+  return (raw) =>
+    !raw.id &&
+    raw.title === book.title &&
+    raw.author === book.author &&
+    (raw.date_read || null) === dateStr &&
+    (raw.rating ?? null) === (book.rating ?? null);
+}
+
+// Appends a "delete this manual entry" button to `li`. On confirm, removes
+// the matching raw entry from `path` (via removeFromManualFile, in
+// manual-entries.js) and reloads the whole dashboard - simplest way to
+// keep every tab's data consistent after a write.
+function addDeleteButton(li, { path, predicate, label }) {
+  const btn = el("button", "delete-btn", "✕");
+  btn.type = "button";
+  btn.title = `Delete "${label}"`;
+  btn.addEventListener("click", async () => {
+    if (!confirm(`Delete "${label}"? This can't be undone.`)) return;
+    btn.disabled = true;
+    btn.textContent = "…";
+    try {
+      const removed = await removeFromManualFile(path, predicate, `Delete manual entry: ${label}`);
+      if (!removed) {
+        alert("Couldn't find that entry - it may have already been deleted elsewhere.");
+      }
+      loadAndRenderDashboard();
+    } catch (err) {
+      alert(`Delete failed: ${err.message}`);
+      btn.disabled = false;
+      btn.textContent = "✕";
+    }
+  });
+  li.appendChild(btn);
+}
+
 function renderMovies(container, watched) {
   const movies = watched.filter((w) => w.type === "movie");
   container.appendChild(el("p", "stat", `${movies.length} movies watched`));
   renderPaginatedList(container, movies, (m) => {
     const li = el("li", "item-row");
+    const label = `${m.title}${m.year ? ` (${m.year})` : ""}`;
     li.appendChild(el("span", "item-date", fmtDate(m.watchedAt)));
-    li.appendChild(el("span", "item-title", `${m.title}${m.year ? ` (${m.year})` : ""}`));
-    if (m.source === "manual") li.appendChild(el("span", "badge", "manual"));
+    li.appendChild(el("span", "item-title", label));
+    if (m.source === "manual") {
+      li.appendChild(el("span", "badge", "manual"));
+      addDeleteButton(li, {
+        path: CONFIG.paths.manualWatched,
+        predicate: watchedMatchPredicate(m),
+        label,
+      });
+    }
     return li;
   });
 }
@@ -78,13 +138,21 @@ function renderTv(container, watched) {
   );
   renderPaginatedList(container, episodes, (e) => {
     const li = el("li", "item-row");
-    li.appendChild(el("span", "item-date", fmtDate(e.watchedAt)));
     const code =
       e.season != null && e.number != null
         ? `S${String(e.season).padStart(2, "0")}E${String(e.number).padStart(2, "0")}`
         : "";
-    li.appendChild(el("span", "item-title", `${e.showTitle} ${code} - ${e.title}`));
-    if (e.source === "manual") li.appendChild(el("span", "badge", "manual"));
+    const label = `${e.showTitle} ${code} - ${e.title}`;
+    li.appendChild(el("span", "item-date", fmtDate(e.watchedAt)));
+    li.appendChild(el("span", "item-title", label));
+    if (e.source === "manual") {
+      li.appendChild(el("span", "badge", "manual"));
+      addDeleteButton(li, {
+        path: CONFIG.paths.manualWatched,
+        predicate: watchedMatchPredicate(e),
+        label,
+      });
+    }
     return li;
   });
 }
@@ -93,10 +161,18 @@ function renderBooks(container, books) {
   container.appendChild(el("p", "stat", `${books.length} books read`));
   renderPaginatedList(container, books, (b) => {
     const li = el("li", "item-row");
+    const label = `${b.title} - ${b.author}`;
     li.appendChild(el("span", "item-date", fmtDate(b.dateRead)));
-    li.appendChild(el("span", "item-title", `${b.title} - ${b.author}`));
+    li.appendChild(el("span", "item-title", label));
     if (b.rating) li.appendChild(el("span", "rating", `★${b.rating}`));
-    if (b.source === "manual") li.appendChild(el("span", "badge", "manual"));
+    if (b.source === "manual") {
+      li.appendChild(el("span", "badge", "manual"));
+      addDeleteButton(li, {
+        path: CONFIG.paths.manualBooks,
+        predicate: bookMatchPredicate(b),
+        label,
+      });
+    }
     return li;
   });
 }
