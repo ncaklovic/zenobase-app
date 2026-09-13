@@ -16,9 +16,11 @@ async function appendToManualFile(path, entry, commitMessage, attempt = 1) {
     await ghPutFile(path, JSON.stringify(updated, null, 2), commitMessage, existing?.sha);
   } catch (err) {
     // Someone else wrote to this file between our read and our write
-    // (e.g. two tabs, or a double-submit). Re-read the latest version
-    // and try again rather than risk losing what changed in between.
-    if (err.isConflict && attempt < 5) {
+    // (e.g. two tabs, or a double-submit) - re-read and try again. Or the
+    // write never reliably reached/returned from the API at all (a 5xx, or
+    // a non-JSON error page - see isTransient in github-api.js, e.g. this
+    // machine's TLS-inspecting corporate proxy) - just retry as-is.
+    if ((err.isConflict || err.isTransient) && attempt < 5) {
       return appendToManualFile(path, entry, commitMessage, attempt + 1);
     }
     throw err;
@@ -45,7 +47,7 @@ async function removeFromManualFile(path, predicate, commitMessage, attempt = 1)
     await ghPutFile(path, JSON.stringify(items, null, 2), commitMessage, existing.sha);
     return true;
   } catch (err) {
-    if (err.isConflict && attempt < 5) {
+    if ((err.isConflict || err.isTransient) && attempt < 5) {
       return removeFromManualFile(path, predicate, commitMessage, attempt + 1);
     }
     throw err;

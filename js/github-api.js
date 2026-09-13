@@ -139,8 +139,23 @@ async function ghPutFile(path, contentStr, message, sha) {
     throw err;
   }
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`Failed to write ${path}: ${res.status} ${err.message || ""}`);
+    let body = {};
+    let isJson = true;
+    try {
+      body = await res.json();
+    } catch {
+      isJson = false;
+    }
+    const err = new Error(`Failed to write ${path}: ${res.status} ${body.message || ""}`);
+    // A 5xx, or a non-JSON body (an error page from something between us
+    // and the API - e.g. the TLS-inspecting corporate proxy noted in
+    // CLAUDE.md), isn't GitHub rejecting the write - it's the request not
+    // reliably reaching/returning from the API at all. Same fix as the 409
+    // conflict retry below: worth an automatic retry rather than making the
+    // user manually resubmit the form, which is what happened before this
+    // was added (worked on the 3rd manual retry).
+    if (res.status >= 500 || !isJson) err.isTransient = true;
+    throw err;
   }
   return res.json();
 }
