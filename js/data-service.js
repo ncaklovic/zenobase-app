@@ -7,6 +7,13 @@ async function loadJsonFile(path) {
   return JSON.parse(text);
 }
 
+// "HH:MM:SS" -> total seconds. listened_duration/episode_duration in the
+// podcast export are always this shape (no days component seen in practice).
+function parseHmsToSeconds(hms) {
+  const [h, m, s] = hms.split(":").map(Number);
+  return h * 3600 + m * 60 + s;
+}
+
 function normalizeTraktItem(raw, source) {
   const base = {
     id: String(raw.id),
@@ -90,4 +97,21 @@ async function loadBooks() {
   const all = [...goodreadsBooks, ...manualBooks];
   all.sort((a, b) => (b.dateRead || 0) - (a.dateRead || 0));
   return all;
+}
+
+async function loadPodcasts() {
+  const text = await ghGetRawText(CONFIG.paths.podcasts);
+  if (text === null) return [];
+  const rows = parseCsv(text);
+  const items = rows.map((r) => ({
+    podcastName: r.podcast_name,
+    episodeName: r.episode_name,
+    // Source timestamps are "YYYY-MM-DD HH:MM:SS" (no "T") - Date can't
+    // reliably parse that form across browsers without it.
+    listenedAt: new Date(r.listening_start_at.replace(" ", "T")),
+    durationSeconds: parseHmsToSeconds(r.listened_duration),
+    fullyListened: r.fully_listened === "true",
+  }));
+  items.sort((a, b) => b.listenedAt - a.listenedAt);
+  return items;
 }

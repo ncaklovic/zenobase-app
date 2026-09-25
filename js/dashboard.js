@@ -187,6 +187,24 @@ function renderMusic(container, scrobbles) {
   });
 }
 
+function formatDuration(totalSeconds) {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function renderPodcasts(container, podcasts) {
+  container.appendChild(el("p", "stat", `${podcasts.length} episodes listened`));
+  renderPaginatedList(container, podcasts, (p) => {
+    const li = el("li", "item-row");
+    li.appendChild(el("span", "item-date", fmtDate(p.listenedAt)));
+    li.appendChild(el("span", "item-title", `${p.podcastName} - ${p.episodeName}`));
+    li.appendChild(el("span", "badge", formatDuration(p.durationSeconds)));
+    if (!p.fullyListened) li.appendChild(el("span", "badge", "partial"));
+    return li;
+  });
+}
+
 function setupTabs() {
   const buttons = document.querySelectorAll(".tab-button");
   const panels = document.querySelectorAll(".tab-panel");
@@ -210,21 +228,23 @@ async function loadAndRenderDashboard() {
 
   statusEl.textContent = "Loading...";
 
-  for (const id of ["tab-movies", "tab-tv", "tab-books", "tab-music"]) {
+  for (const id of ["tab-movies", "tab-tv", "tab-books", "tab-music", "tab-podcasts"]) {
     document.getElementById(id).innerHTML = "";
   }
 
   try {
-    const [watched, books, music] = await Promise.all([
+    const [watched, books, music, podcasts] = await Promise.all([
       loadWatched(),
       loadBooks(),
       loadMusic(),
+      loadPodcasts(),
     ]);
 
     renderMovies(document.getElementById("tab-movies"), watched);
     renderTv(document.getElementById("tab-tv"), watched);
     renderBooks(document.getElementById("tab-books"), books);
     renderMusic(document.getElementById("tab-music"), music);
+    renderPodcasts(document.getElementById("tab-podcasts"), podcasts);
 
     statusEl.textContent = "";
   } catch (e) {

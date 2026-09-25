@@ -1,9 +1,10 @@
 # zenobase-app
 
-Static personal media dashboard + entry forms (movies, TV, books; music is
-read-only). Public repo, GitHub Pages, **zero personal data ever committed
-here** - all real history lives in the private `ncaklovic/zenobase` repo
-and is read/written at runtime via the GitHub API.
+Static personal media dashboard + entry forms (movies, TV, books; music and
+podcasts are read-only). Public repo, GitHub Pages, **zero personal data
+ever committed here** - all real history lives in the private
+`ncaklovic/zenobase` repo and is read/written at runtime via the GitHub
+API.
 
 ## Why two repos
 
@@ -45,6 +46,7 @@ authenticated with a fine-grained PAT the user pastes into Settings.
 | `data/trakt_full.json` | `zenobase`'s cron (`main.py`) | read-only |
 | `data/lastfm_full.json` | `zenobase`'s cron (`main.py`) | read-only |
 | `data/goodreads_reads_full.json` | manual, `zenobase`'s `scripts/scrape_goodreads_reads.py` | read-only |
+| `data/podcasts_full.csv` | manual export from the podcast app, dropped into `zenobase/data` by hand | read-only |
 | `data/manual_watched.json` | **this app** | read + write |
 | `data/manual_books.json` | **this app** | read + write |
 
@@ -54,8 +56,26 @@ Manual movie/episode entries use the *same shape* Trakt's API returns
 caring which one an item came from. Keep that shape if you touch the entry
 schema.
 
-Music has no entry form on purpose - Last.fm scrobbling already covers it
-automatically, so there was nothing to duplicate.
+Music and podcasts have no entry form on purpose - Last.fm scrobbling and
+the podcast app's own listening history already cover them automatically,
+so there was nothing to duplicate.
+
+### Podcasts (added 2026-09)
+
+Source is a raw CSV export from the podcast app (filename shape
+`Listening_report_<timestamp>.csv`, one row per episode listen) - there's
+no conversion script like Goodreads has, so it's uploaded to
+`zenobase/data/podcasts_full.csv` by hand, renamed from whatever timestamped
+name the app gives it each time (overwrite in place; no history is lost
+since each export is the full listening history, not a delta). Columns
+used: `podcast_name`, `episode_name`, `listening_start_at`
+(`"YYYY-MM-DD HH:MM:SS"`, no `T` - `loadPodcasts()` in `js/data-service.js`
+inserts one before parsing as a `Date`), `listened_duration` (`"HH:MM:SS"`),
+`fully_listened` (`"true"`/`"false"` string). This is why `js/csv.js` (an
+RFC4180 parser - podcast/episode names routinely contain quoted commas)
+exists again after being dead code post-Goodreads-scrape-switch; it's only
+loaded by `index.html`, not `add.html`, matching music's read-only-no-entry-
+form pattern.
 
 ### Goodreads switched from the CSV export to a full reread-history scrape (2026-09)
 
@@ -72,9 +92,11 @@ event**, not per book, so a 3-times-reread book now produces 3 rows. See
 not tied to the nightly cron, so this file's freshness lags behind
 `trakt`/`lastfm`.
 
-`js/csv.js` (the RFC4180 CSV parser, only ever used to parse this export)
-is now dead code - its `<script>` tag was removed from `index.html`, but
-the file itself is still present if you want to delete it.
+`js/csv.js` (the RFC4180 CSV parser used for that export) briefly became
+dead code at this point - its `<script>` tag was removed from `index.html`
+- but was reintroduced (rewritten from scratch; the original was deleted)
+when podcasts were added, since that source is also a raw CSV export. See
+"Podcasts" below.
 
 ## Metadata sources (both CORS-verified, not assumed)
 
@@ -150,13 +172,14 @@ made yet - starting points to know about:
 - **Data to build on**: `data/goodreads_reads_full.json` now has real
   per-read-event history (good for "books/movies/episodes per year"-style
   stats, unlike the old one-row-per-book Goodreads CSV); `trakt`/`lastfm`
-  already had full event-level history. All three are loaded and
-  normalized by `js/data-service.js`'s `loadWatched()`/`loadBooks()`/
-  `loadMusic()` - that's the natural place to derive stats from, or to add
-  a `loadStats()` alongside them.
+  already had full event-level history; `podcasts_full.csv` adds a fourth.
+  All four are loaded and normalized by `js/data-service.js`'s
+  `loadWatched()`/`loadBooks()`/`loadMusic()`/`loadPodcasts()` - that's the
+  natural place to derive stats from, or to add a `loadStats()` alongside
+  them.
 - **Search**: nothing exists yet across any tab; large lists (400+ books,
   likely thousands of scrobbles) make this valuable pretty quickly.
 - **Formatting**: current rendering is minimal (`js/dashboard.js`'s
-  `renderMovies`/`renderTv`/`renderBooks`/`renderMusic` - see the shared
-  `renderPaginatedList()` helper added this session, reuse it for any new
+  `renderMovies`/`renderTv`/`renderBooks`/`renderMusic`/`renderPodcasts` -
+  see the shared `renderPaginatedList()` helper, reuse it for any new
   paginated view like a stats table).
