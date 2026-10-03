@@ -13,7 +13,7 @@ function el(tag, className, text) {
   return e;
 }
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [10, 15, 25, 50, 100];
 
 // Renders `items` as a searchable <ul class="item-list"> with Prev/Next
