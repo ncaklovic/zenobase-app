@@ -50,6 +50,23 @@ async function tmdbGetEpisode(showId, season, episode) {
   return { title: e.name, season: e.season_number, number: e.episode_number };
 }
 
+/** Show details used to work out what the next episode is: the per-season
+ * episode counts and the last episode that has actually aired. */
+async function tmdbGetShowDetails(showId) {
+  const url = `${TMDB_BASE}/tv/${showId}?api_key=${getTmdbKey()}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const d = await res.json();
+  return {
+    seasons: (d.seasons || [])
+      .filter((s) => s.season_number > 0)
+      .map((s) => ({ season: s.season_number, episodeCount: s.episode_count })),
+    lastAired: d.last_episode_to_air
+      ? { season: d.last_episode_to_air.season_number, number: d.last_episode_to_air.episode_number }
+      : null,
+  };
+}
+
 /** Full external IDs (imdb/tvdb) for a movie, fetched only at save time. */
 async function tmdbMovieExternalIds(tmdbId) {
   const url = `${TMDB_BASE}/movie/${tmdbId}/external_ids?api_key=${getTmdbKey()}`;

@@ -28,6 +28,7 @@ function normalizeTraktItem(raw, source) {
       season: raw.episode?.season ?? null,
       number: raw.episode?.number ?? null,
       showTitle: raw.show?.title || "",
+      showIds: raw.show?.ids || {},
       year: raw.show?.year ?? null,
       ids: raw.episode?.ids || {},
     };
