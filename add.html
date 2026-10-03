@@ -16,13 +16,13 @@
   </header>
 
   <div class="tabs">
-    <button class="tab-button active" data-tab="add-movie">Movie</button>
-    <button class="tab-button" data-tab="add-tv">TV episode</button>
+    <button class="tab-button active" data-tab="add-tv">TV episode</button>
+    <button class="tab-button" data-tab="add-movie">Movie</button>
     <button class="tab-button" data-tab="add-book">Book</button>
   </div>
 
   <main>
-    <section id="tab-add-movie" class="tab-panel entry-form">
+    <section id="tab-add-movie" class="tab-panel entry-form hidden">
       <input id="movie-search" type="text" placeholder="Search for a movie..." />
       <ul id="movie-results" class="search-results"></ul>
       <p id="movie-selected" class="selected-label"></p>
@@ -34,7 +34,7 @@
       <p id="movie-status" class="status"></p>
     </section>
 
-    <section id="tab-add-tv" class="tab-panel entry-form hidden">
+    <section id="tab-add-tv" class="tab-panel entry-form">
       <h3 class="section-title">Continue watching</h3>
       <p id="tv-continue-status" class="hint"></p>
       <ul id="tv-continue" class="search-results continue-list"></ul>
