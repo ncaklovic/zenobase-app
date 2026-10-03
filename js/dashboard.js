@@ -13,27 +13,71 @@ function el(tag, className, text) {
   return e;
 }
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 15;
+const PAGE_SIZE_OPTIONS = [10, 15, 25, 50, 100];
 
-// Renders `items` as a <ul class="item-list"> with Prev/Next paging below
-// it, `pageSize` items at a time. `renderItem` builds one <li> per item.
-function renderPaginatedList(container, items, renderItem, pageSize = PAGE_SIZE) {
+// Renders `items` as a searchable <ul class="item-list"> with Prev/Next
+// paging. `renderItem` builds one <li> per item; `searchText(item)` returns
+// the string a query is matched against (case-insensitive, every
+// whitespace-separated term must appear).
+function renderPaginatedList(container, items, renderItem, searchText) {
   let page = 0;
-  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  let pageSize = PAGE_SIZE;
+  let filtered = items;
+
+  const controls = el("div", "list-controls");
+  const search = el("input", "list-search");
+  search.type = "search";
+  search.placeholder = "Search...";
+  const sizeSelect = el("select", "page-size");
+  sizeSelect.title = "Rows per page";
+  for (const n of PAGE_SIZE_OPTIONS) {
+    const opt = el("option", "", `${n} / page`);
+    opt.value = n;
+    opt.selected = n === pageSize;
+    sizeSelect.appendChild(opt);
+  }
+  controls.appendChild(search);
+  controls.appendChild(sizeSelect);
 
   const list = el("ul", "item-list");
   const pager = el("div", "pager");
+  container.appendChild(controls);
   container.appendChild(list);
   container.appendChild(pager);
 
+  const haystack = items.map((i) => searchText(i).toLowerCase());
+
+  search.addEventListener("input", () => {
+    const terms = search.value.toLowerCase().split(/\s+/).filter(Boolean);
+    filtered = terms.length
+      ? items.filter((_, idx) => terms.every((t) => haystack[idx].includes(t)))
+      : items;
+    page = 0;
+    render();
+  });
+  sizeSelect.addEventListener("change", () => {
+    pageSize = Number(sizeSelect.value);
+    page = 0;
+    render();
+  });
+
   function render() {
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
     list.innerHTML = "";
     const start = page * pageSize;
-    for (const item of items.slice(start, start + pageSize)) {
+    for (const item of filtered.slice(start, start + pageSize)) {
       list.appendChild(renderItem(item));
     }
 
     pager.innerHTML = "";
+    if (filtered.length === 0) {
+      pager.appendChild(el("span", "pager-info", "No matches"));
+      return;
+    }
+    if (filtered.length !== items.length) {
+      pager.appendChild(el("span", "pager-info", `${filtered.length} of ${items.length} match`));
+    }
     if (totalPages <= 1) return;
 
     const prevBtn = el("button", "pager-btn", "‹ Prev");
@@ -127,7 +171,7 @@ function renderMovies(container, watched) {
       });
     }
     return li;
-  });
+  }, (m) => `${m.title} ${m.year || ""} ${fmtDate(m.watchedAt)}`);
 }
 
 function renderTv(container, watched) {
@@ -154,7 +198,7 @@ function renderTv(container, watched) {
       });
     }
     return li;
-  });
+  }, (e) => `${e.showTitle} ${e.title} ${fmtDate(e.watchedAt)}`);
 }
 
 function renderBooks(container, books) {
@@ -174,7 +218,7 @@ function renderBooks(container, books) {
       });
     }
     return li;
-  });
+  }, (b) => `${b.title} ${b.author} ${fmtDate(b.dateRead)}`);
 }
 
 function renderMusic(container, scrobbles) {
@@ -184,7 +228,7 @@ function renderMusic(container, scrobbles) {
     li.appendChild(el("span", "item-date", fmtDate(s.watchedAt)));
     li.appendChild(el("span", "item-title", `${s.artist} - ${s.name}`));
     return li;
-  });
+  }, (s) => `${s.artist} ${s.name} ${fmtDate(s.watchedAt)}`);
 }
 
 function formatDuration(totalSeconds) {
@@ -202,7 +246,7 @@ function renderPodcasts(container, podcasts) {
     li.appendChild(el("span", "badge", formatDuration(p.durationSeconds)));
     if (!p.fullyListened) li.appendChild(el("span", "badge", "partial"));
     return li;
-  });
+  }, (p) => `${p.podcastName} ${p.episodeName} ${fmtDate(p.listenedAt)}`);
 }
 
 function setupTabs() {
