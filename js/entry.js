@@ -170,7 +170,14 @@ async function loadContinueWatching(listEl, statusEl, onPick) {
       count++;
       const li = document.createElement("li");
       const code = `S${String(next.season).padStart(2, "0")}E${String(next.number).padStart(2, "0")}`;
-      li.textContent = `${show.title} - next: ${code} (last watched ${show.lastWatchedAt.toISOString().slice(0, 10)})`;
+      li.title = `${show.title} - last watched ${show.lastWatchedAt.toISOString().slice(0, 10)}`;
+      const name = document.createElement("span");
+      name.className = "continue-name";
+      name.textContent = show.title;
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.textContent = code;
+      li.append(name, badge);
       li.addEventListener("click", () => onPick(show, next));
       listEl.appendChild(li);
     });

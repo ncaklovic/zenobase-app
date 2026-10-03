@@ -212,4 +212,7 @@ main { padding: 1rem 1.5rem 3rem; }
 }
 
 .section-title { font-size: 0.95rem; margin: 0.75rem 0 0.25rem; }
-.continue-list { max-height: 260px; }
+.continue-list { max-height: 11rem; }
+.continue-list li { display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.6rem; }
+.continue-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.continue-list .badge { flex-shrink: 0; }
